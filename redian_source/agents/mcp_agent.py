@@ -6,13 +6,14 @@ class MCPAgent:
     """
     Agent for interacting with an MCP server via Docker/stdio.
     """
-    def __init__(self, token, mcp_image):
+    def __init__(self, token, mcp_image, MCP_TOKEN_NAME):
         self.token = token
         self.mcp_image = mcp_image
+        self.MCP_TOKEN_NAME = MCP_TOKEN_NAME
         self.proc = subprocess.Popen(
             [
                 "docker", "run", "-i", "--rm",
-                "-e", f"GITHUB_PERSONAL_ACCESS_TOKEN={token}",
+                "-e", f"{MCP_TOKEN_NAME}={token}", # CHANGE THE GITHUB PERSONAL ACCESS TOKEN TO AN ENV
                 mcp_image
             ],
             stdin=subprocess.PIPE,
