@@ -1,52 +1,39 @@
 import os
-from dotenv import load_dotenv
+import traceback
+from redian_source.agents.redian_agent import RedianAgent
 
-try:
-    load_dotenv()
-except ImportError:
-    # Fallback: simple .env parser
-    def load_dotenv():
-        if os.path.exists('.env'):
-            with open('.env') as f:
-                for line in f:
-                    if line.strip() and not line.startswith('#'):
-                        k, v = line.strip().split('=', 1)
-                        os.environ[k] = v
-    load_dotenv()
-
-from redian_source import MCPAgent, LLMAgent
-
-def test_mcp_agent_list_tools_real():
-    token = os.environ.get("TOKEN")
-    mcp_image = os.environ.get("MCP_IMAGE", "ghcr.io/github/github-mcp-server")
-    mcp_token_name = os.environ.get("MCP_TOKEN_NAME", "GITHUB_PERSONAL_ACCESS_TOKEN")
-    agent = MCPAgent(token=token, mcp_image=mcp_image, MCP_TOKEN_NAME=mcp_token_name)
-    print("Agent created")
-    tools = agent.list_tools()
-    print("MCP tools:", tools)
-    agent.terminate()
-
-def test_llm_agent_send_prompt_real():
+def test_redian_agent():
     groq_api_key = os.environ.get("GROQ_API_KEY")
     token = os.environ.get("TOKEN")
-    mcp_image = os.environ.get("MCP_IMAGE", "ghcr.io/github/github-mcp-server")
-    mcp_token_name = os.environ.get("MCP_TOKEN_NAME", "GITHUB_PERSONAL_ACCESS_TOKEN")
-    tool_agent = MCPAgent(token=token, mcp_image=mcp_image, MCP_TOKEN_NAME=mcp_token_name)
-    llm_agent = LLMAgent(model="gemma2-9b-it", tool_agent=tool_agent, groq_api_key=groq_api_key)
-    print("Groq tools:", llm_agent.llm_tools)
-    print("Groq tool summaries:", llm_agent.llm_tool_summaries)
-    tool_agent.terminate()
+    mcp_image = os.environ.get("MCP_IMAGE", "mcp-url")
+    mcp_token_name = os.environ.get("MCP_TOKEN_NAME", "mcp-token-name")
+    mcp_servers = {
+        "default": {
+            "command": "docker",
+            "args": [
+                "run", "-i", "--rm",
+                "-e", f"{mcp_token_name}={token}",
+                mcp_image
+            ],
+            "transport": "stdio",
+        }
+    }
+    agent = RedianAgent(
+        mcp_servers=mcp_servers,
+        groq_api_key=groq_api_key,
+        model="qwen-qwq-32b"
+    )
+    print("Streaming RedianAgent result:")
+    for chunk in agent.stream_sync(
+        "Get my github repositories. Use chain of thought and tool outputs to chain together calls to get necessary information."
+    ):
+        print(chunk)
 
 if __name__ == "__main__":
     try:
-        print("Running MCPAgent integration test...")
-        test_mcp_agent_list_tools_real()
-        print("MCPAgent test passed.\n")
+        print("Running RedianAgent integration test...")
+        test_redian_agent()
+        print("RedianAgent test passed.\n")
     except Exception as e:
-        print(f"MCPAgent test failed: {e}\n")
-    try:
-        print("Running LLMAgent integration test...")
-        test_llm_agent_send_prompt_real()
-        print("LLMAgent test passed.\n")
-    except Exception as e:
-        print(f"LLMAgent test failed: {e}\n") 
+        traceback.print_exc()
+        print(f"RedianAgent test failed: {e}\n") 

@@ -11,14 +11,12 @@ class LLMAgent:
         self.tool_agent = tool_agent
         self.llm_tools = []
         self.llm_tool_summaries = []
-        print("llm tools", self.llm_tools)
         self.groq_api_key = groq_api_key or os.environ.get("GROQ_API_KEY")
         if not self.groq_api_key:
             raise ValueError("Groq API key must be provided via argument or GROQ_API_KEY env var.")
         self.groq = Groq(api_key=self.groq_api_key)
         # Fetch and store tools if tool_agent is provided
         self.fetch_and_store_tools()
-        print("llm tools", self.llm_tools)
 
     def fetch_and_store_tools(self):
         """
@@ -57,4 +55,12 @@ class LLMAgent:
             model=self.model,
             messages=[{"role": "user", "content": prompt}]
         )
-        return response 
+        return response
+
+    def get_langchain_llm(self):
+        from langchain_community.chat_models import ChatOpenAI
+        return ChatOpenAI(
+            openai_api_key=self.groq_api_key,
+            openai_api_base="https://api.groq.com/openai/v1",
+            model_name=self.model
+        ) 
