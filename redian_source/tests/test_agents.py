@@ -3,10 +3,10 @@ import traceback
 from redian_source.agents.redian_agent import RedianAgent
 
 def test_redian_agent():
-    groq_api_key = os.environ.get("GROQ_API_KEY")
     token = os.environ.get("TOKEN")
     mcp_image = os.environ.get("MCP_IMAGE", "mcp-url")
     mcp_token_name = os.environ.get("MCP_TOKEN_NAME", "mcp-token-name")
+    gemini_api_key = os.environ.get("GEMINI_API_KEY")
     mcp_servers = {
         "default": {
             "command": "docker",
@@ -20,8 +20,8 @@ def test_redian_agent():
     }
     agent = RedianAgent(
         mcp_servers=mcp_servers,
-        groq_api_key=groq_api_key,
-        model="qwen-qwq-32b"
+        gemini_api_key=gemini_api_key,
+        model="gemini-2.0-flash"
     )
     print("Streaming RedianAgent result:")
     for chunk in agent.stream_sync(

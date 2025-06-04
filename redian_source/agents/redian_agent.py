@@ -1,22 +1,30 @@
 import asyncio
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
-from langchain_openai import ChatOpenAI
+# from langchain_openai import ChatOpenAI  # Commented out, only Gemini is used now
+from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 class RedianAgent:
     """
     High-level agent that wraps MCP tool integration and LangGraph orchestration using langchain-mcp-adapters.
+    Only supports Gemini (Google Generative AI) as the LLM backend.
     Usage:
         agent = RedianAgent(
             mcp_servers={...},
-            groq_api_key=..., 
-            model="model_name"
+            gemini_api_key="...",
+            model="gemini-pro" # or another Gemini model
         )
         result = agent.run_sync("Do something with tools!")
     """
-    def __init__(self, mcp_servers, groq_api_key, model="meta-llama/llama-4-maverick-17b-128e-instruct"):
+    def __init__(self, mcp_servers, gemini_api_key, model="gemini-pro"):
         self.mcp_servers = mcp_servers
-        self.groq_api_key = groq_api_key
+        self.gemini_api_key = gemini_api_key
         self.model = model
         self._agent = None
         self._tools = None
@@ -29,11 +37,11 @@ class RedianAgent:
         """
         client = MultiServerMCPClient(self.mcp_servers)
         self._tools = await client.get_tools()
-        #print(self._tools)
-        self._llm = ChatOpenAI(
-            openai_api_key=self.groq_api_key,
-            openai_api_base="https://api.groq.com/openai/v1",
-            model_name=self.model
+        if not self.gemini_api_key:
+            raise ValueError("gemini_api_key must be provided to RedianAgent.")
+        self._llm = ChatGoogleGenerativeAI(
+            google_api_key=self.gemini_api_key,
+            model=self.model
         )
         self._agent = create_react_agent(self._llm, self._tools)
         self._setup_done = True
