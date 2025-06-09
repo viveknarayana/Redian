@@ -30,13 +30,14 @@ class RedianAgent:
         self._tools = None
         self._llm = None
         self._setup_done = False
+        self.client = None
 
     async def setup(self):
         """
         Asynchronously set up the MCP client, tools, LLM, and agent.
         """
-        client = MultiServerMCPClient(self.mcp_servers)
-        self._tools = await client.get_tools()
+        self.client = MultiServerMCPClient(self.mcp_servers)
+        self._tools = await self.client.get_tools()
         if not self.gemini_api_key:
             raise ValueError("gemini_api_key must be provided to RedianAgent.")
         self._llm = ChatGoogleGenerativeAI(
