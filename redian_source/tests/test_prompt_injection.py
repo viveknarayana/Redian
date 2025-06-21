@@ -1,4 +1,5 @@
 import os
+import json
 from redian_source.agents.redian_agent import RedianAgent
 from redian_source.attacks.prompt_injection import PromptInjectionAttack
 
@@ -8,6 +9,9 @@ def test_prompt_injection():
     mcp_image = os.environ.get("MCP_IMAGE", "mcp-url")
     mcp_token_name = os.environ.get("MCP_TOKEN_NAME", "mcp-token-name")
     gemini_api_key = os.environ.get("GEMINI_API_KEY")
+
+    if not gemini_api_key:
+        raise ValueError("GEMINI_API_KEY environment variable not set.")
 
     mcp_servers = {
         "default": {
@@ -24,13 +28,21 @@ def test_prompt_injection():
     agent = RedianAgent(
         mcp_servers=mcp_servers,
         gemini_api_key=gemini_api_key,
-        model="gemini-2.0-flash"
+        model="gemini-1.5-flash"
     )
 
-    attack = PromptInjectionAttack()
+    # The attack now requires the api key to power its meta-llm
+    attack = PromptInjectionAttack(gemini_api_key=gemini_api_key)
+    
     result = attack.run(agent)
-    print("Prompt Injection Attack Result:")
-    print(result)
+    
+    print("--- Dynamic Prompt Injection Attack Result ---")
+    # Use a custom serializer to handle non-serializable objects
+    def default_serializer(o):
+        return f"<non-serializable: {type(o).__qualname__}>"
+
+    # Pretty-print the complex result using json
+    print(json.dumps(result, indent=2, default=default_serializer))
 
 if __name__ == "__main__":
     test_prompt_injection() 
