@@ -3,6 +3,42 @@ import json
 from redian_source.agents.redian_agent import RedianAgent
 from redian_source.attacks.prompt_injection import PromptInjectionAttack
 
+def pretty_print_result(result):
+    """
+    Custom print function to handle the complex result object and display it clearly.
+    """
+    print("--- Dynamic Prompt Injection Attack Result ---")
+    
+    # Print the attack type and the meta prompt used to generate the payload
+    print("\n[Attack Type]:", result.get('attack'))
+    print("\n[Meta Prompt Used to Generate Payload]:")
+    print("-" * 40)
+    print(result.get('meta_prompt', 'Not available.'))
+    print("-" * 40)
+
+    # Print the final malicious payload sent to the agent
+    print("\n[Final Payload Sent to Agent]:")
+    print("-" * 40)
+    print(result.get('payload', 'Not available.'))
+    print("-" * 40)
+
+    # Extract and print the agent's final response
+    agent_result = result.get('result', {})
+    final_messages = agent_result.get('messages', [])
+    
+    print("\n[Agent's Final Response]:")
+    print("-" * 40)
+    if final_messages and hasattr(final_messages[-1], 'content'):
+        # The final message is usually the AI's response
+        print(final_messages[-1].content)
+    else:
+        # Fallback for unexpected structure
+        def default_serializer(o):
+            return f"<non-serializable: {type(o).__qualname__}>"
+        print(json.dumps(agent_result, indent=2, default=default_serializer))
+    print("-" * 40)
+
+
 def test_prompt_injection():
     # Set up environment variables or replace with your actual values
     token = os.environ.get("TOKEN")
@@ -36,13 +72,7 @@ def test_prompt_injection():
     
     result = attack.run(agent)
     
-    print("--- Dynamic Prompt Injection Attack Result ---")
-    # Use a custom serializer to handle non-serializable objects
-    def default_serializer(o):
-        return f"<non-serializable: {type(o).__qualname__}>"
-
-    # Pretty-print the complex result using json
-    print(json.dumps(result, indent=2, default=default_serializer))
+    pretty_print_result(result)
 
 if __name__ == "__main__":
     test_prompt_injection() 
