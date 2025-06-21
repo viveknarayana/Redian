@@ -83,24 +83,33 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
             print("[DEBUG] Agent setup complete.")
         return getattr(agent, "_tools", [])
 
-    def run(self, agent):
+    def run(self, agent, payload=None):
         async def _run_async():
             print("[DEBUG] Starting async run in PromptInjectionAttack...")
-            tools = await self._get_tools(agent)
-            tool_names = [getattr(t, 'name', str(t)) for t in tools]
-            print(f"[DEBUG] Tools fetched: {json.dumps(tool_names)}")
+            
+            current_payload = payload
+            meta_prompt = "N/A (static payload used)"
+            attack_type = "static_prompt_injection"
 
-            payload, meta_prompt = await self.craft_payload(tools)
-            print(f"[DEBUG] Payload crafted:\n---\n{payload}\n---")
+            if current_payload is None:
+                attack_type = "dynamic_prompt_injection"
+                tools = await self._get_tools(agent)
+                tool_names = [getattr(t, 'name', str(t)) for t in tools]
+                print(f"[DEBUG] Tools fetched: {json.dumps(tool_names)}")
+                current_payload, meta_prompt = await self.craft_payload(tools)
+                print(f"[DEBUG] Payload crafted:\n---\n{current_payload}\n---")
+            else:
+                print(f"[DEBUG] Using static payload:\n---\n{current_payload}\n---")
+
             
             print("[DEBUG] Running agent with payload...")
-            result = await agent.run(payload)
+            result = await agent.run(current_payload)
             print("[DEBUG] Agent run finished.")
             
             return {
-                "attack": "dynamic_prompt_injection",
+                "attack": attack_type,
                 "meta_prompt": meta_prompt,
-                "payload": payload,
+                "payload": current_payload,
                 "result": result
             }
         
