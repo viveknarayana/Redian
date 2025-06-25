@@ -99,8 +99,8 @@ def test_prompt_injection():
     attack = PromptInjectionAttack(gemini_api_key=gemini_api_key)
     
     result = attack.run(agent)
-    
     pretty_print_result(result)
+    print(result["verdict"])
 
 if __name__ == "__main__":
     test_prompt_injection() 
