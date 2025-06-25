@@ -1,6 +1,21 @@
+# Core dependencies
 requests
 pydantic
 pytest
 docker
 pyyaml
 groq
+
+# LLM and agent frameworks
+langchain-google-genai
+langchain-core
+langgraph
+
+# Environment and utility
+python-dotenv
+
+# MCP adapter (if available on PyPI)
+langchain-mcp-adapters
+
+# Community models (for unused/llm_agent.py)
+langchain-community
