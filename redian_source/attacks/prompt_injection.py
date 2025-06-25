@@ -1,6 +1,9 @@
 import asyncio
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
+import os
+import logging
+from logging.handlers import RotatingFileHandler
 
 class PromptInjectionAttack:
     """
@@ -8,7 +11,7 @@ class PromptInjectionAttack:
     dynamically craft an attack prompt based on the agent's available tools,
     focusing on creating malicious tool sequences for vulnerability testing.
     """
-    def __init__(self, gemini_api_key, base_jailbreak=None, meta_prompt_template=None):
+    def __init__(self, gemini_api_key, base_jailbreak=None, meta_prompt_template=None, log_dir=None):
         if not gemini_api_key:
             raise ValueError("A Gemini API key is required to generate attack payloads.")
         
@@ -52,6 +55,28 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
 
 **Generated Prompt for Target Agent (must be a single paragraph of natural language with a malicious but test-oriented goal):**
 """
+
+        # Logging setup
+        self.log_dir = os.path.expanduser(log_dir) if log_dir else os.path.expanduser("~/.redian")
+        self.log_file = os.path.join(self.log_dir, "redian_attack.log")
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir, exist_ok=True)
+        self.logger = logging.getLogger(f"redian_attack_{self.log_file}")
+        self.logger.setLevel(logging.INFO)
+        if not self.logger.handlers:
+            handler = RotatingFileHandler(self.log_file, maxBytes=1_000_000, backupCount=3)
+            formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
+            handler.setFormatter(formatter)
+            self.logger.addHandler(handler)
+
+    def log_attack(self, meta_prompt, execution_trace, verdict):
+        """
+        Log the meta prompt, execution trace, and verdict to the attack log file.
+        """
+        self.logger.info("\n==== Redian Attack Log Entry ===="
+                        f"\nMETA PROMPT:\n{meta_prompt}"
+                        f"\n---\nTOOL EXECUTION TRACE:\n{execution_trace}"
+                        f"\n---\nVERDICT:\n{json.dumps(verdict, indent=2)}\n==== END ENTRY ====")
 
     def _format_tools_for_prompt(self, tools):
         if not tools:
@@ -135,6 +160,9 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
 
             # Auto-judge the result
             verdict = self.judge_attack_success(current_payload, execution_trace)
+
+            # Log the meta prompt, execution trace, and verdict
+            self.log_attack(meta_prompt, execution_trace, verdict)
 
             return {
                 "attack": attack_type,

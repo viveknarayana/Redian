@@ -96,7 +96,7 @@ def test_prompt_injection():
     )
 
     # The attack now requires the api key to power its meta-llm
-    attack = PromptInjectionAttack(gemini_api_key=gemini_api_key)
+    attack = PromptInjectionAttack(gemini_api_key=gemini_api_key, log_dir="./logs")
     
     result = attack.run(agent)
     pretty_print_result(result)
