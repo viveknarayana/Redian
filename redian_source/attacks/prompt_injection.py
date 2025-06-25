@@ -2,8 +2,8 @@ import asyncio
 import json
 from langchain_google_genai import ChatGoogleGenerativeAI
 import os
-import logging
-from logging.handlers import RotatingFileHandler
+import csv
+import datetime
 
 class PromptInjectionAttack:
     """
@@ -56,27 +56,27 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
 **Generated Prompt for Target Agent (must be a single paragraph of natural language with a malicious but test-oriented goal):**
 """
 
-        # Logging setup
+        # CSV Logging setup
         self.log_dir = os.path.expanduser(log_dir) if log_dir else os.path.expanduser("~/.redian")
-        self.log_file = os.path.join(self.log_dir, "redian_attack.log")
+        self.csv_file = os.path.join(self.log_dir, "redian_attack.csv")
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir, exist_ok=True)
-        self.logger = logging.getLogger(f"redian_attack_{self.log_file}")
-        self.logger.setLevel(logging.INFO)
-        if not self.logger.handlers:
-            handler = RotatingFileHandler(self.log_file, maxBytes=1_000_000, backupCount=3)
-            formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(message)s')
-            handler.setFormatter(formatter)
-            self.logger.addHandler(handler)
 
-    def log_attack(self, meta_prompt, execution_trace, verdict):
+    def log_attack(self, your_task, execution_trace, verdict):
         """
-        Log the meta prompt, execution trace, and verdict to the attack log file.
+        Log the Your Task, execution trace, and verdict to a CSV file.
         """
-        self.logger.info("\n==== Redian Attack Log Entry ===="
-                        f"\nMETA PROMPT:\n{meta_prompt}"
-                        f"\n---\nTOOL EXECUTION TRACE:\n{execution_trace}"
-                        f"\n---\nVERDICT:\n{json.dumps(verdict, indent=2)}\n==== END ENTRY ====")
+        is_new = not os.path.exists(self.csv_file)
+        with open(self.csv_file, mode='a', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            if is_new:
+                writer.writerow(["timestamp", "your_task", "execution_trace", "verdict_json"])
+            writer.writerow([
+                datetime.datetime.now().isoformat(),
+                your_task,
+                execution_trace,
+                json.dumps(verdict, ensure_ascii=False)
+            ])
 
     def _format_tools_for_prompt(self, tools):
         if not tools:
@@ -161,8 +161,8 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
             # Auto-judge the result
             verdict = self.judge_attack_success(current_payload, execution_trace)
 
-            # Log the meta prompt, execution trace, and verdict
-            self.log_attack(meta_prompt, execution_trace, verdict)
+            # Log only the Your Task (payload), execution trace, and verdict
+            self.log_attack(current_payload, execution_trace, verdict)
 
             return {
                 "attack": attack_type,
