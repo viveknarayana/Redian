@@ -61,16 +61,17 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
         self.csv_file = os.path.join(self.log_dir, "redian_attack.csv")
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir, exist_ok=True)
+        # Overwrite the log file and write the header at the start of each run
+        with open(self.csv_file, mode='w', newline='', encoding='utf-8') as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["timestamp", "your_task", "execution_trace", "verdict_json"])
 
     def log_attack(self, your_task, execution_trace, verdict):
         """
         Log the Your Task, execution trace, and verdict to a CSV file.
         """
-        is_new = not os.path.exists(self.csv_file)
         with open(self.csv_file, mode='a', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
-            if is_new:
-                writer.writerow(["timestamp", "your_task", "execution_trace", "verdict_json"])
             writer.writerow([
                 datetime.datetime.now().isoformat(),
                 your_task,
