@@ -67,7 +67,7 @@ def pretty_print_result(result):
     print("\n" + "-" * 40)
 
 
-def test_prompt_injection():
+def test_prompt_injection(num_iterations=1):
     # Set up environment variables or replace with your actual values
     token = os.environ.get("TOKEN")
     mcp_image = os.environ.get("MCP_IMAGE", "mcp-url")
@@ -95,12 +95,22 @@ def test_prompt_injection():
         model="gemini-1.5-flash"
     )
 
-    # The attack now requires the api key to power its meta-llm
-    attack = PromptInjectionAttack(gemini_api_key=gemini_api_key, log_dir="./logs")
-    
-    result = attack.run(agent)
-    pretty_print_result(result)
-    print(result["verdict"])
+    attack = PromptInjectionAttack(gemini_api_key=gemini_api_key, log_dir="./logs", iterations=num_iterations)
+    results = attack.run(agent)
+
+    if num_iterations == 1:
+        pretty_print_result(results)
+        print(results["verdict"])
+    else:
+        for i, result in enumerate(results):
+            print(f"\n{'='*20} Iteration {i+1} of {num_iterations} {'='*20}\n")
+            pretty_print_result(result)
+            print(result["verdict"])
+            print(f"\n{'='*60}\n")
 
 if __name__ == "__main__":
-    test_prompt_injection() 
+    try:
+        num = int(input("How many prompt injection iterations? ").strip())
+    except Exception:
+        num = 1
+    test_prompt_injection(num_iterations=num) 
