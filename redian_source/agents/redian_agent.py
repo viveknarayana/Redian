@@ -23,10 +23,11 @@ class RedianAgent:
     High-level agent that wraps MCP tool integration and a stateful LangGraph
     orchestrator for robust, multi-step tool execution.
     """
-    def __init__(self, mcp_servers, gemini_api_key, model="gemini-1.5-flash"):
+    def __init__(self, mcp_servers, gemini_api_key, model="gemini-1.5-flash", debug=False):
         self.mcp_servers = mcp_servers
         self.gemini_api_key = gemini_api_key
         self.model = model
+        self.debug = debug
         self._agent = None
         self._tools = None
         self._llm = None
@@ -37,10 +38,12 @@ class RedianAgent:
         """
         Asynchronously sets up the MCP client, tools, LLM, and the stateful agent graph.
         """
-        print("[AGENT_SETUP] Initializing agent setup...")
+        if self.debug:
+            print("[AGENT_SETUP] Initializing agent setup...")
         self.client = MultiServerMCPClient(self.mcp_servers)
         self._tools = await self.client.get_tools()
-        print(f"[AGENT_SETUP] Successfully loaded {len(self._tools)} tools.")
+        if self.debug:
+            print(f"[AGENT_SETUP] Successfully loaded {len(self._tools)} tools.")
 
         if not self.gemini_api_key:
             raise ValueError("gemini_api_key must be provided to RedianAgent.")
@@ -62,7 +65,8 @@ class RedianAgent:
             return "end"
 
         def call_model(state: AgentState):
-            print("[GRAPH] Calling model...")
+            if self.debug:
+                print("[GRAPH] Calling model...")
             response = llm_with_tools.invoke(state['messages'])
             # We return a list, because we want to add it to the state
             return {"messages": [response]}
@@ -89,12 +93,15 @@ class RedianAgent:
         
         self._agent = workflow.compile()
         self._setup_done = True
-        print("[AGENT_SETUP] Agent setup complete. Graph compiled.")
+        if self.debug:
+            print("[AGENT_SETUP] Agent setup complete. Graph compiled.")
 
     async def run(self, prompt):
         """
-        Asynchronously run the agent on the given prompt.
+        Run the agent on a given prompt and return the result.
         """
+        if self.debug:
+            print("[GRAPH] Calling model...")
         if not self._setup_done:
             await self.setup()
         
