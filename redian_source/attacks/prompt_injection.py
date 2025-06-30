@@ -131,57 +131,58 @@ Generate a **single, natural-language paragraph** for the target agent. The prom
         Run the prompt injection attack for the configured number of iterations.
         Returns a list of results if iterations > 1, else a single result dict.
         """
-        results = []
-        for _ in range(self.iterations):
-            async def _run_async():
-                print("[DEBUG] Starting async run in PromptInjectionAttack...")
-                current_payload = payload
-                meta_prompt = "N/A (static payload used)"
-                attack_type = "static_prompt_injection"
-                if current_payload is None:
-                    attack_type = "dynamic_prompt_injection"
-                    tools = await self._get_tools(agent)
-                    tool_names = [getattr(t, 'name', str(t)) for t in tools]
-                    print(f"[DEBUG] Tools fetched: {json.dumps(tool_names)}")
-                    current_payload, meta_prompt = await self.craft_payload(tools)
-                    print(f"[DEBUG] Payload crafted:\n---\n{current_payload}\n---")
-                else:
-                    print(f"[DEBUG] Using static payload:\n---\n{current_payload}\n---")
-                print("[DEBUG] Running agent with payload...")
-                result = await agent.run(current_payload)
-                print("[DEBUG] Agent run finished.")
-                messages = result.get('messages', [])
-                trace_lines = []
-                for i, msg in enumerate(messages):
-                    msg_class = msg.__class__.__name__
-                    if msg_class == "HumanMessage":
-                        trace_lines.append(f"\n>> Step {i}: User Input\n{msg.content}")
-                    elif msg_class == "AIMessage":
-                        trace_lines.append(f"\n>> Step {i}: Agent's Thought\n{msg.content}")
-                        if hasattr(msg, 'tool_calls') and msg.tool_calls:
-                            for tc in msg.tool_calls:
-                                args_str = json.dumps(tc.get('args', {}), indent=2)
-                                trace_lines.append(f"   Tool Call: {tc.get('name', 'Unknown')}\n     Args: {args_str}")
-                    elif msg_class == "ToolMessage":
-                        tool_call_id = getattr(msg, 'tool_call_id', 'N/A')
-                        trace_lines.append(f"\n>> Step {i}: Tool Output (for call id: {tool_call_id})\n{msg.content}")
-                execution_trace = "\n".join(trace_lines)
-                verdict = self.judge_attack_success(current_payload, execution_trace)
-                self.log_attack(current_payload, execution_trace, verdict)
-                return {
-                    "attack": attack_type,
-                    "meta_prompt": meta_prompt,
-                    "payload": current_payload,
-                    "result": result,
-                    "verdict": verdict
-                }
-            print("[DEBUG] Executing PromptInjectionAttack.run...")
-            result = asyncio.run(_run_async())
-            print("[DEBUG] PromptInjectionAttack.run finished.")
-            results.append(result)
-        if self.iterations == 1:
-            return results[0]
-        return results
+        async def _run_all():
+            results = []
+            for _ in range(self.iterations):
+                result = await self._run_single(agent, payload)
+                results.append(result)
+            if self.iterations == 1:
+                return results[0]
+            return results
+        return asyncio.run(_run_all())
+
+    async def _run_single(self, agent, payload=None):
+        print("[DEBUG] Starting async run in PromptInjectionAttack...")
+        current_payload = payload
+        meta_prompt = "N/A (static payload used)"
+        attack_type = "static_prompt_injection"
+        if current_payload is None:
+            attack_type = "dynamic_prompt_injection"
+            tools = await self._get_tools(agent)
+            tool_names = [getattr(t, 'name', str(t)) for t in tools]
+            print(f"[DEBUG] Tools fetched: {json.dumps(tool_names)}")
+            current_payload, meta_prompt = await self.craft_payload(tools)
+            print(f"[DEBUG] Payload crafted:\n---\n{current_payload}\n---")
+        else:
+            print(f"[DEBUG] Using static payload:\n---\n{current_payload}\n---")
+        print("[DEBUG] Running agent with payload...")
+        result = await agent.run(current_payload)
+        print("[DEBUG] Agent run finished.")
+        messages = result.get('messages', [])
+        trace_lines = []
+        for i, msg in enumerate(messages):
+            msg_class = msg.__class__.__name__
+            if msg_class == "HumanMessage":
+                trace_lines.append(f"\n>> Step {i}: User Input\n{msg.content}")
+            elif msg_class == "AIMessage":
+                trace_lines.append(f"\n>> Step {i}: Agent's Thought\n{msg.content}")
+                if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                    for tc in msg.tool_calls:
+                        args_str = json.dumps(tc.get('args', {}), indent=2)
+                        trace_lines.append(f"   Tool Call: {tc.get('name', 'Unknown')}\n     Args: {args_str}")
+            elif msg_class == "ToolMessage":
+                tool_call_id = getattr(msg, 'tool_call_id', 'N/A')
+                trace_lines.append(f"\n>> Step {i}: Tool Output (for call id: {tool_call_id})\n{msg.content}")
+        execution_trace = "\n".join(trace_lines)
+        verdict = self.judge_attack_success(current_payload, execution_trace)
+        self.log_attack(current_payload, execution_trace, verdict)
+        return {
+            "attack": attack_type,
+            "meta_prompt": meta_prompt,
+            "payload": current_payload,
+            "result": result,
+            "verdict": verdict
+        }
 
     def judge_attack_success(self, attack_prompt, execution_trace, model="gemini-1.5-flash"):
         """
